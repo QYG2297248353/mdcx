@@ -321,3 +321,10 @@ def init_QTreeWidget(self: "MyMAinWindow"):
     self.item_fail = QTreeWidgetItem(self.Ui.treeWidget_number)
     self.item_fail.setText(0, "失败")
     self.Ui.treeWidget_number.expandAll()  # 展开主界面树状内容
+    # 清空封面和缩略图显示
+    self.Ui.label_poster.setText("封面图")
+    self.Ui.label_thumb.setText("缩略图")
+    self.Ui.label_poster.resize(156, 220)
+    self.Ui.label_thumb.resize(328, 220)
+    self.Ui.label_poster_size.setText("")
+    self.Ui.label_thumb_size.setText("")
