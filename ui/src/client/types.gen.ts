@@ -12,9 +12,8 @@ export type CleanAction = 'clean_ext' | 'clean_name' | 'clean_contains' | 'clean
 
 /**
  * Config
- * Pydantic model for application configuration, converted from ConfigSchema.
  */
-export type Config = {
+export type ConfigInput = {
     /**
      * 媒体路径
      */
@@ -48,11 +47,11 @@ export type Config = {
      */
     scrape_softlink_path?: boolean;
     /**
-     * 自动链接
+     * 自动创建软链接
      */
     auto_link?: boolean;
     /**
-     * 要处理的目录
+     * 排除的目录
      */
     folders?: Array<string>;
     /**
@@ -80,7 +79,7 @@ export type Config = {
      */
     clean_contains?: Array<string>;
     /**
-     * 清理小于此大小的文件（MB）
+     * 清理小于此大小的文件（KB）
      */
     clean_size?: number;
     /**
@@ -96,7 +95,7 @@ export type Config = {
      */
     clean_enable?: Array<CleanAction>;
     /**
-     * 线程数
+     * 并发数
      */
     thread_number?: number;
     /**
@@ -180,13 +179,13 @@ export type Config = {
      */
     google_used?: Array<string>;
     /**
-     * Google排除
+     * Google搜图排除的网址
      */
     google_exclude?: Array<string>;
     /**
-     * 刮削收藏
+     * 刮削模式
      */
-    scrape_like?: string;
+    scrape_like?: 'info' | 'speed' | 'single';
     /**
      * 单个网站
      */
@@ -216,273 +215,41 @@ export type Config = {
      */
     website_guochan?: Array<Website>;
     /**
-     * 完整字段
-     */
-    whole_fields?: Array<WholeField>;
-    /**
-     * 空字段
-     */
-    none_fields?: Array<NoneField>;
-    /**
-     * 网站设置
-     */
-    website_set?: Array<WebsiteSet>;
-    /**
-     * 标题网站源
-     */
-    title_website?: Array<Website>;
-    /**
-     * 中文标题网站源
-     */
-    title_zh_website?: Array<Website>;
-    /**
-     * 排除的标题网站源
-     */
-    title_website_exclude?: Array<Website>;
-    /**
-     * 简介网站源
-     */
-    outline_website?: Array<Website>;
-    /**
-     * 中文简介网站源
-     */
-    outline_zh_website?: Array<Website>;
-    /**
-     * 排除的简介网站源
-     */
-    outline_website_exclude?: Array<Website>;
-    /**
-     * 演员网站源
-     */
-    actor_website?: Array<Website>;
-    /**
-     * 排除的演员网站源
-     */
-    actor_website_exclude?: Array<Website>;
-    /**
-     * 缩略图网站源
-     */
-    thumb_website?: Array<Website>;
-    /**
-     * 排除的缩略图网站源
-     */
-    thumb_website_exclude?: Array<Website>;
-    /**
-     * 海报网站源
-     */
-    poster_website?: Array<Website>;
-    /**
-     * 排除的海报网站源
-     */
-    poster_website_exclude?: Array<Website>;
-    /**
-     * 剧照网站源
-     */
-    extrafanart_website?: Array<Website>;
-    /**
-     * 排除的剧照网站源
-     */
-    extrafanart_website_exclude?: Array<Website>;
-    /**
-     * 预告片网站源
-     */
-    trailer_website?: Array<Website>;
-    /**
-     * 排除的预告片网站源
-     */
-    trailer_website_exclude?: Array<Website>;
-    /**
-     * 标签网站源
-     */
-    tag_website?: Array<Website>;
-    /**
-     * 排除的标签网站源
-     */
-    tag_website_exclude?: Array<Website>;
-    /**
-     * 发布日期网站源
-     */
-    release_website?: Array<Website>;
-    /**
-     * 排除的发布日期网站源
-     */
-    release_website_exclude?: Array<Website>;
-    /**
-     * 时长网站源
-     */
-    runtime_website?: Array<Website>;
-    /**
-     * 排除的时长网站源
-     */
-    runtime_website_exclude?: Array<Website>;
-    /**
-     * 评分网站源
-     */
-    score_website?: Array<Website>;
-    /**
-     * 排除的评分网站源
-     */
-    score_website_exclude?: Array<Website>;
-    /**
-     * 导演网站源
-     */
-    director_website?: Array<Website>;
-    /**
-     * 排除的导演网站源
-     */
-    director_website_exclude?: Array<Website>;
-    /**
-     * 系列网站源
-     */
-    series_website?: Array<Website>;
-    /**
-     * 排除的系列网站源
-     */
-    series_website_exclude?: Array<Website>;
-    /**
-     * 工作室网站源
-     */
-    studio_website?: Array<Website>;
-    /**
-     * 排除的工作室网站源
-     */
-    studio_website_exclude?: Array<Website>;
-    /**
-     * 发行商网站源
-     */
-    publisher_website?: Array<Website>;
-    /**
-     * 排除的发行商网站源
-     */
-    publisher_website_exclude?: Array<Website>;
-    /**
-     * 想看网站源
-     */
-    wanted_website?: Array<Website>;
-    /**
-     * 翻译服务
-     */
-    translate_by?: Array<Translator>;
-    /**
-     * Deepl密钥
-     */
-    deepl_key?: string;
-    /**
-     * Llm网址
-     */
-    llm_url?: string;
-    /**
-     * Llm模型
-     */
-    llm_model?: string;
-    /**
-     * Llm密钥
-     */
-    llm_key?: string;
-    /**
-     * Llm提示
-     */
-    llm_prompt?: string;
-    /**
-     * Llm每秒最大请求数
-     */
-    llm_max_req_sec?: number;
-    /**
-     * Llm最大尝试次数
-     */
-    llm_max_try?: number;
-    /**
-     * Llm温度
-     */
-    llm_temperature?: number;
-    /**
-     * 标题语言
-     */
-    title_language?: string;
-    /**
-     * 标题色花
+     * 使用色花标题
      */
     title_sehua?: boolean;
     /**
-     * 标题Yesjav
+     * 使用 Yesjav 标题
      */
     title_yesjav?: boolean;
     /**
-     * 翻译标题
-     */
-    title_translate?: boolean;
-    /**
-     * 中文标题色花
+     * 使用色花中文标题
      */
     title_sehua_zh?: boolean;
-    /**
-     * 简介语言
-     */
-    outline_language?: string;
-    /**
-     * 翻译简介
-     */
-    outline_translate?: boolean;
-    /**
-     * 显示大纲
-     */
-    outline_show?: Array<OutlineShow>;
-    /**
-     * 演员语言
-     */
-    actor_language?: string;
     /**
      * 演员真名
      */
     actor_realname?: boolean;
     /**
-     * 翻译演员
+     * 简介格式
      */
-    actor_translate?: boolean;
+    outline_format?: Array<OutlineShow>;
     /**
-     * 标签语言
+     * 字段配置
      */
-    tag_language?: string;
+    field_configs?: {
+        [key in CrawlerResultFields]?: FieldConfig;
+    };
     /**
-     * 翻译标签
+     * 网站配置
      */
-    tag_translate?: boolean;
+    site_configs?: {
+        [key in Website]?: SiteConfig;
+    };
     /**
-     * 包含标签
+     * 翻译配置
      */
-    tag_include?: Array<TagInclude>;
-    /**
-     * 导演语言
-     */
-    director_language?: string;
-    /**
-     * 翻译导演
-     */
-    director_translate?: boolean;
-    /**
-     * 系列语言
-     */
-    series_language?: string;
-    /**
-     * 翻译系列
-     */
-    series_translate?: boolean;
-    /**
-     * 工作室语言
-     */
-    studio_language?: string;
-    /**
-     * 翻译工作室
-     */
-    studio_translate?: boolean;
-    /**
-     * 发行商语言
-     */
-    publisher_language?: string;
-    /**
-     * 翻译发行商
-     */
-    publisher_translate?: boolean;
+    translate_config?: TranslateConfig;
     /**
      * NFO包含内容
      */
@@ -491,6 +258,10 @@ export type Config = {
      * NFO标语
      */
     nfo_tagline?: string;
+    /**
+     * 包含标签
+     */
+    nfo_tag_include?: Array<TagInclude>;
     /**
      * NFO系列标签
      */
@@ -508,9 +279,9 @@ export type Config = {
      */
     nfo_tag_actor?: string;
     /**
-     * NFO演员包含标签
+     * NFO 演员名白名单
      */
-    nfo_tag_actor_contains?: string;
+    nfo_tag_actor_contains?: Array<string>;
     /**
      * 目录名称
      */
@@ -576,19 +347,11 @@ export type Config = {
      */
     youma_style?: string;
     /**
-     * 显示魔词位置
-     */
-    show_moword?: Array<ShowLocation>;
-    /**
-     * 显示4K位置
-     */
-    show_4k?: Array<ShowLocation>;
-    /**
      * CD名称
      */
     cd_name?: number;
     /**
-     * CD字符
+     * 分集规则
      */
     cd_char?: Array<CdChar>;
     /**
@@ -602,11 +365,11 @@ export type Config = {
     /**
      * 高清名称
      */
-    hd_name?: string;
+    hd_name?: 'height' | 'hd';
     /**
      * 获取高清
      */
-    hd_get?: string;
+    hd_get?: 'video' | 'path' | 'none';
     /**
      * 中文字符
      */
@@ -642,7 +405,7 @@ export type Config = {
     /**
      * 服务器类型
      */
-    server_type?: string;
+    server_type?: 'emby' | 'jellyfin';
     /**
      * Emby网址
      */
@@ -662,7 +425,7 @@ export type Config = {
     /**
      * 使用数据库
      */
-    use_database?: number;
+    use_database?: boolean;
     /**
      * 信息数据库路径
      */
@@ -700,33 +463,34 @@ export type Config = {
      */
     mark_type?: Array<MarkType>;
     /**
-     * 固定水印
+     * 水印添加规则
+     * not_fixed: 不固定位置. 将从首个位置开始顺时针方向依次添加; fixed: 固定一个位置, 水印在此依次横向添加; corner: 分别设置不同种类水印的位置.
      */
-    mark_fixed?: string;
+    mark_fixed?: 'not_fixed' | 'fixed' | 'corner';
     /**
-     * 水印位置
+     * 水印规则为不固定时首个水印的位置
      */
     mark_pos?: string;
     /**
-     * 边角水印位置
+     * 水印规则为固定时的位置
      */
     mark_pos_corner?: string;
     /**
-     * 字幕水印位置
+     * 中文字幕水印位置
      */
     mark_pos_sub?: string;
     /**
-     * 马赛克水印位置
+     * 马赛克类型水印位置
      */
     mark_pos_mosaic?: string;
     /**
-     * 高清水印位置
+     * 清晰度水印位置
      */
     mark_pos_hd?: string;
     /**
      * 代理类型
      */
-    proxy_type?: string;
+    use_proxy?: boolean;
     /**
      * 代理地址
      */
@@ -743,6 +507,14 @@ export type Config = {
      * Theporndb API令牌
      */
     theporndb_api_token?: string;
+    /**
+     * AMMDS 访问地址
+     */
+    ammds_url?: string;
+    /**
+     * AMMDS API Key
+     */
+    ammds_api_key?: string;
     /**
      * Javdb
      */
@@ -774,7 +546,7 @@ export type Config = {
     /**
      * 本地库
      */
-    local_library?: string;
+    local_library?: Array<string>;
     /**
      * 演员名称
      */
@@ -807,23 +579,595 @@ export type Config = {
      * 休息时间
      */
     rest_time?: string;
+};
+
+/**
+ * Config
+ */
+export type ConfigOutput = {
     /**
-     * 声明
+     * 媒体路径
      */
-    statement?: number;
+    media_path?: string;
+    /**
+     * 软链接路径
+     */
+    softlink_path?: string;
+    /**
+     * 成功输出目录
+     */
+    success_output_folder?: string;
+    /**
+     * 失败输出目录
+     */
+    failed_output_folder?: string;
+    /**
+     * 额外剧照目录
+     */
+    extrafanart_folder?: string;
+    /**
+     * 媒体类型
+     */
+    media_type?: Array<string>;
+    /**
+     * 字幕类型
+     */
+    sub_type?: Array<string>;
+    /**
+     * 刮削软链接路径
+     */
+    scrape_softlink_path?: boolean;
+    /**
+     * 自动创建软链接
+     */
+    auto_link?: boolean;
+    /**
+     * 排除的目录
+     */
+    folders?: Array<string>;
+    /**
+     * 要从文件名中删除的字符串
+     */
+    string?: Array<string>;
+    /**
+     * 要处理的最小文件大小（MB）
+     */
+    file_size?: number;
+    /**
+     * 不转义的字符串
+     */
+    no_escape?: Array<NoEscape>;
+    /**
+     * 清理规则: 扩展名
+     */
+    clean_ext?: Array<string>;
+    /**
+     * 清理规则: 文件名(完全匹配)
+     */
+    clean_name?: Array<string>;
+    /**
+     * 清理规则: 文件名包含
+     */
+    clean_contains?: Array<string>;
+    /**
+     * 清理小于此大小的文件（KB）
+     */
+    clean_size?: number;
+    /**
+     * 清理规则: 排除扩展名
+     */
+    clean_ignore_ext?: Array<string>;
+    /**
+     * 清理规则: 排除文件名包含
+     */
+    clean_ignore_contains?: Array<string>;
+    /**
+     * 启用的清理规则
+     */
+    clean_enable?: Array<CleanAction>;
+    /**
+     * 并发数
+     */
+    thread_number?: number;
+    /**
+     * 线程时间
+     */
+    thread_time?: number;
+    /**
+     * Javdb时间
+     */
+    javdb_time?: number;
+    /**
+     * 主模式
+     */
+    main_mode?: number;
+    /**
+     * 读取模式
+     */
+    read_mode?: Array<ReadMode>;
+    /**
+     * 更新模式
+     */
+    update_mode?: string;
+    /**
+     * 更新A目录
+     */
+    update_a_folder?: string;
+    /**
+     * 更新B目录
+     */
+    update_b_folder?: string;
+    /**
+     * 更新C文件模板
+     */
+    update_c_filetemplate?: string;
+    /**
+     * 更新D目录
+     */
+    update_d_folder?: string;
+    /**
+     * 更新标题模板
+     */
+    update_titletemplate?: string;
+    /**
+     * 软链接
+     */
+    soft_link?: number;
+    /**
+     * 成功后移动文件
+     */
+    success_file_move?: boolean;
+    /**
+     * 失败后移动文件
+     */
+    failed_file_move?: boolean;
+    /**
+     * 成功后重命名文件
+     */
+    success_file_rename?: boolean;
+    /**
+     * 删除空目录
+     */
+    del_empty_folder?: boolean;
+    /**
+     * 显示海报
+     */
+    show_poster?: boolean;
+    /**
+     * 下载文件类型
+     */
+    download_files?: Array<DownloadableFile>;
+    /**
+     * 保留文件类型
+     */
+    keep_files?: Array<KeepableFile>;
+    /**
+     * 高清图片来源
+     */
+    download_hd_pics?: Array<HdPicSource>;
+    /**
+     * Google使用
+     */
+    google_used?: Array<string>;
+    /**
+     * Google搜图排除的网址
+     */
+    google_exclude?: Array<string>;
+    /**
+     * 刮削模式
+     */
+    scrape_like?: 'info' | 'speed' | 'single';
+    /**
+     * 单个网站
+     */
+    website_single?: Website;
+    /**
+     * 有码网站源
+     */
+    website_youma?: Array<Website>;
+    /**
+     * 无码网站源
+     */
+    website_wuma?: Array<Website>;
+    /**
+     * 素人网站源
+     */
+    website_suren?: Array<Website>;
+    /**
+     * FC2网站源
+     */
+    website_fc2?: Array<Website>;
+    /**
+     * 欧美网站源
+     */
+    website_oumei?: Array<Website>;
+    /**
+     * 国产网站源
+     */
+    website_guochan?: Array<Website>;
+    /**
+     * 使用色花标题
+     */
+    title_sehua?: boolean;
+    /**
+     * 使用 Yesjav 标题
+     */
+    title_yesjav?: boolean;
+    /**
+     * 使用色花中文标题
+     */
+    title_sehua_zh?: boolean;
+    /**
+     * 演员真名
+     */
+    actor_realname?: boolean;
+    /**
+     * 简介格式
+     */
+    outline_format?: Array<OutlineShow>;
+    /**
+     * 字段配置
+     */
+    field_configs?: {
+        [key in CrawlerResultFields]?: FieldConfig;
+    };
+    /**
+     * 网站配置
+     */
+    site_configs?: {
+        [key in Website]?: SiteConfig;
+    };
+    /**
+     * 翻译配置
+     */
+    translate_config?: TranslateConfig;
+    /**
+     * NFO包含内容
+     */
+    nfo_include_new?: Array<NfoInclude>;
+    /**
+     * NFO标语
+     */
+    nfo_tagline?: string;
+    /**
+     * 包含标签
+     */
+    nfo_tag_include?: Array<TagInclude>;
+    /**
+     * NFO系列标签
+     */
+    nfo_tag_series?: string;
+    /**
+     * NFO工作室标签
+     */
+    nfo_tag_studio?: string;
+    /**
+     * NFO发行商标签
+     */
+    nfo_tag_publisher?: string;
+    /**
+     * NFO演员标签
+     */
+    nfo_tag_actor?: string;
+    /**
+     * NFO 演员名白名单
+     */
+    nfo_tag_actor_contains?: Array<string>;
+    /**
+     * 目录名称
+     */
+    folder_name?: string;
+    /**
+     * 文件命名
+     */
+    naming_file?: string;
+    /**
+     * 媒体命名
+     */
+    naming_media?: string;
+    /**
+     * 禁止字符
+     */
+    prevent_char?: string;
+    /**
+     * 字段规则
+     */
+    fields_rule?: Array<FieldRule>;
+    /**
+     * 后缀排序
+     */
+    suffix_sort?: Array<SuffixSort>;
+    /**
+     * 未知演员名称
+     */
+    actor_no_name?: string;
+    /**
+     * 发布规则
+     */
+    release_rule?: string;
+    /**
+     * 目录名称最大长度
+     */
+    folder_name_max?: number;
+    /**
+     * 文件名称最大长度
+     */
+    file_name_max?: number;
+    /**
+     * 演员名称最大数量
+     */
+    actor_name_max?: number;
+    /**
+     * 更多演员名称
+     */
+    actor_name_more?: string;
+    /**
+     * UMR样式
+     */
+    umr_style?: string;
+    /**
+     * 泄露样式
+     */
+    leak_style?: string;
+    /**
+     * 无码样式
+     */
+    wuma_style?: string;
+    /**
+     * 有码样式
+     */
+    youma_style?: string;
+    /**
+     * CD名称
+     */
+    cd_name?: number;
+    /**
+     * 分集规则
+     */
+    cd_char?: Array<CdChar>;
+    /**
+     * 图片简化命名
+     */
+    pic_simple_name?: boolean;
+    /**
+     * 预告片简化命名
+     */
+    trailer_simple_name?: boolean;
+    /**
+     * 高清名称
+     */
+    hd_name?: 'height' | 'hd';
+    /**
+     * 获取高清
+     */
+    hd_get?: 'video' | 'path' | 'none';
+    /**
+     * 中文字符
+     */
+    cnword_char?: Array<string>;
+    /**
+     * 中文样式
+     */
+    cnword_style?: string;
+    /**
+     * 目录中文
+     */
+    folder_cnword?: boolean;
+    /**
+     * 文件中文
+     */
+    file_cnword?: boolean;
+    /**
+     * 字幕目录
+     */
+    subtitle_folder?: string;
+    /**
+     * 添加字幕
+     */
+    subtitle_add?: boolean;
+    /**
+     * 添加中文字幕
+     */
+    subtitle_add_chs?: boolean;
+    /**
+     * 重新刮削时添加字幕
+     */
+    subtitle_add_rescrape?: boolean;
+    /**
+     * 服务器类型
+     */
+    server_type?: 'emby' | 'jellyfin';
+    /**
+     * Emby网址
+     */
+    emby_url?: string;
+    /**
+     * API密钥
+     */
+    api_key?: string;
+    /**
+     * 用户ID
+     */
+    user_id?: string;
+    /**
+     * Emby功能开关
+     */
+    emby_on?: Array<EmbyAction>;
+    /**
+     * 使用数据库
+     */
+    use_database?: boolean;
+    /**
+     * 信息数据库路径
+     */
+    info_database_path?: string;
+    /**
+     * Gfriends Github
+     */
+    gfriends_github?: string;
+    /**
+     * 演员照片目录
+     */
+    actor_photo_folder?: string;
+    /**
+     * 演员照片Kodi自动
+     */
+    actor_photo_kodi_auto?: boolean;
+    /**
+     * 海报水印
+     */
+    poster_mark?: number;
+    /**
+     * 缩略图水印
+     */
+    thumb_mark?: number;
+    /**
+     * Fanart水印
+     */
+    fanart_mark?: number;
+    /**
+     * 水印大小
+     */
+    mark_size?: number;
+    /**
+     * 水印类型
+     */
+    mark_type?: Array<MarkType>;
+    /**
+     * 水印添加规则
+     * not_fixed: 不固定位置. 将从首个位置开始顺时针方向依次添加; fixed: 固定一个位置, 水印在此依次横向添加; corner: 分别设置不同种类水印的位置.
+     */
+    mark_fixed?: 'not_fixed' | 'fixed' | 'corner';
+    /**
+     * 水印规则为不固定时首个水印的位置
+     */
+    mark_pos?: string;
+    /**
+     * 水印规则为固定时的位置
+     */
+    mark_pos_corner?: string;
+    /**
+     * 中文字幕水印位置
+     */
+    mark_pos_sub?: string;
+    /**
+     * 马赛克类型水印位置
+     */
+    mark_pos_mosaic?: string;
+    /**
+     * 清晰度水印位置
+     */
+    mark_pos_hd?: string;
+    /**
+     * 代理类型
+     */
+    use_proxy?: boolean;
+    /**
+     * 代理地址
+     */
+    proxy?: string;
+    /**
+     * 超时
+     */
+    timeout?: number;
+    /**
+     * 重试
+     */
+    retry?: number;
+    /**
+     * Theporndb API令牌
+     */
+    theporndb_api_token?: string;
+    /**
+     * AMMDS 访问地址
+     */
+    ammds_url?: string;
+    /**
+     * AMMDS API Key
+     */
+    ammds_api_key?: string;
+    /**
+     * Javdb
+     */
+    javdb?: string;
+    /**
+     * Javbus
+     */
+    javbus?: string;
+    /**
+     * 显示网页日志
+     */
+    show_web_log?: boolean;
+    /**
+     * 显示来源日志
+     */
+    show_from_log?: boolean;
+    /**
+     * 显示数据日志
+     */
+    show_data_log?: boolean;
+    /**
+     * 保存日志
+     */
+    save_log?: boolean;
+    /**
+     * 检查更新
+     */
+    update_check?: boolean;
+    /**
+     * 本地库
+     */
+    local_library?: Array<string>;
+    /**
+     * 演员名称
+     */
+    actors_name?: string;
+    /**
+     * 网盘路径
+     */
+    netdisk_path?: string;
+    /**
+     * 本地磁盘路径
+     */
+    localdisk_path?: string;
+    /**
+     * 窗口标题
+     */
+    window_title?: string;
+    /**
+     * 功能开关
+     */
+    switch_on?: Array<Switch>;
+    /**
+     * 定时器间隔
+     */
+    timed_interval?: string;
+    /**
+     * 休息计数
+     */
+    rest_count?: number;
+    /**
+     * 休息时间
+     */
+    rest_time?: string;
 };
 
 /**
  * ConfigSwitchResponse
  */
 export type ConfigSwitchResponse = {
-    config: Config;
+    config: ConfigOutput;
     /**
      * Errors
      * 加载配置时发生的错误信息列表
      */
     errors: Array<string>;
 };
+
+/**
+ * CrawlerResultFields
+ */
+export type CrawlerResultFields = 'number' | 'mosaic' | 'image_download' | 'actors' | 'all_actors' | 'directors' | 'extrafanart' | 'originalplot' | 'originaltitle' | 'outline' | 'poster' | 'publisher' | 'release' | 'runtime' | 'score' | 'series' | 'studio' | 'tags' | 'thumb' | 'title' | 'trailer' | 'wanted' | 'year' | 'image_cut' | 'source' | 'external_id';
 
 /**
  * CreateSoftlinksBody
@@ -855,6 +1199,25 @@ export type DownloadableFile = 'poster' | 'thumb' | 'fanart' | 'extrafanart' | '
  * EmbyAction
  */
 export type EmbyAction = 'actor_info_zh_cn' | 'actor_info_zh_tw' | 'actor_info_ja' | 'actor_info_all' | 'actor_info_miss' | 'actor_photo_net' | 'actor_photo_local' | 'actor_photo_all' | 'actor_photo_miss' | 'actor_info_translate' | 'actor_info_photo' | 'graphis_backdrop' | 'graphis_face' | 'graphis_new' | 'actor_photo_auto' | 'actor_replace';
+
+/**
+ * FieldConfig
+ */
+export type FieldConfig = {
+    /**
+     * 来源网站优先级
+     */
+    site_prority?: Array<Website>;
+    /**
+     * 语言偏好
+     */
+    language?: Language;
+    /**
+     * 翻译此字段
+     * 若启用则使用首个来源的数据并翻译为指定语言; 否则使用第一个指定语言的数据, 如果所有来源都没有指定语言数据则视为失败.
+     */
+    translate?: boolean;
+};
 
 /**
  * FieldRule
@@ -930,6 +1293,11 @@ export type HttpValidationError = {
 export type KeepableFile = 'poster' | 'thumb' | 'fanart' | 'extrafanart' | 'trailer' | 'nfo' | 'extrafanart_copy' | 'theme_videos';
 
 /**
+ * Language
+ */
+export type Language = 'undefined' | 'unknown' | 'zh_cn' | 'zh_tw' | 'jp' | 'en';
+
+/**
  * MarkType
  */
 export type MarkType = 'sub' | 'youma' | 'umr' | 'leak' | 'uncensored' | 'hd';
@@ -943,11 +1311,6 @@ export type NfoInclude = 'sorttitle' | 'originaltitle' | 'title_cd' | 'outline' 
  * NoEscape
  */
 export type NoEscape = 'no_skip_small_file' | 'folder' | 'skip_success_file' | 'record_success_file' | 'check_symlink' | 'symlink_definition';
-
-/**
- * NoneField
- */
-export type NoneField = 'outline' | 'actor' | 'thumb' | 'poster' | 'extrafanart' | 'trailer' | 'release' | 'runtime' | 'score' | 'tag' | 'director' | 'series' | 'studio' | 'publisher' | 'wanted';
 
 /**
  * OutlineShow
@@ -985,9 +1348,18 @@ export type SetSiteUrlBody = {
 };
 
 /**
- * ShowLocation
+ * SiteConfig
  */
-export type ShowLocation = 'folder' | 'file';
+export type SiteConfig = {
+    /**
+     * 使用无头浏览器
+     */
+    use_browser?: boolean;
+    /**
+     * 自定义网址
+     */
+    custom_url?: string | null;
+};
 
 /**
  * SuffixSort
@@ -997,7 +1369,7 @@ export type SuffixSort = 'moword' | 'cnword' | 'definition';
 /**
  * Switch
  */
-export type Switch = 'auto_start' | 'auto_exit' | 'rest_scrape' | 'timed_scrape' | 'remain_task' | 'show_dialog_exit' | 'show_dialog_stop_scrape' | 'sort_del' | 'ipv4_only' | 'qt_dialog' | 'theporndb_no_hash' | 'hide_dock' | 'passthrough' | 'hide_menu' | 'dark_mode' | 'copy_netdisk_nfo' | 'show_logs' | 'hide_close' | 'hide_mini' | 'hide_none';
+export type Switch = 'auto_start' | 'auto_exit' | 'rest_scrape' | 'timed_scrape' | 'remain_task' | 'show_dialog_exit' | 'show_dialog_stop_scrape' | 'sort_del' | 'qt_dialog' | 'theporndb_no_hash' | 'hide_dock' | 'passthrough' | 'hide_menu' | 'dark_mode' | 'copy_netdisk_nfo' | 'show_logs' | 'hide_close' | 'hide_mini' | 'hide_none' | 'ipv4_only';
 
 /**
  * TagInclude
@@ -1005,9 +1377,56 @@ export type Switch = 'auto_start' | 'auto_exit' | 'rest_scrape' | 'timed_scrape'
 export type TagInclude = 'actor' | 'letters' | 'series' | 'studio' | 'publisher' | 'cnword' | 'mosaic' | 'definition';
 
 /**
+ * TranslateConfig
+ */
+export type TranslateConfig = {
+    /**
+     * 翻译服务
+     */
+    translate_by?: Array<Translator>;
+    /**
+     * Deepl密钥
+     */
+    deepl_key?: string;
+    /**
+     * LLM API Host
+     */
+    llm_url?: string;
+    /**
+     * 模型 ID
+     */
+    llm_model?: string;
+    /**
+     * LLM API Key
+     */
+    llm_key?: string;
+    /**
+     * LLM 提示词
+     */
+    llm_prompt?: string;
+    /**
+     * LLM 读取超时 (秒)
+     * LLM 生成耗时较长, 建议设置较大值
+     */
+    llm_read_timeout?: number;
+    /**
+     * LLM 每秒最大请求数
+     */
+    llm_max_req_sec?: number;
+    /**
+     * LLM 最大尝试次数
+     */
+    llm_max_try?: number;
+    /**
+     * LLM 温度
+     */
+    llm_temperature?: number;
+};
+
+/**
  * Translator
  */
-export type Translator = 'youdao' | 'google' | 'deepl' | 'llm';
+export type Translator = 'youdao' | 'google' | 'deepl' | 'llm' | 'ammds';
 
 /**
  * ValidationError
@@ -1030,17 +1449,7 @@ export type ValidationError = {
 /**
  * Website
  */
-export type Website = 'airav' | 'airav_cc' | 'avsex' | 'avsox' | 'cableav' | 'cnmdb' | 'dmm' | 'faleno' | 'fantastica' | 'fc2' | 'fc2club' | 'fc2hub' | 'fc2ppvdb' | 'freejavbt' | 'getchu' | 'giga' | 'hdouban' | 'hscangku' | 'iqqtv' | 'jav321' | 'javbus' | 'javday' | 'javdb' | 'javlibrary' | 'kin8' | 'love6' | 'lulubar' | 'madouqu' | 'mdtv' | 'mgstage' | '7mmtv' | 'mywife' | 'prestige' | 'theporndb' | 'xcity';
-
-/**
- * WebsiteSet
- */
-export type WebsiteSet = 'official';
-
-/**
- * WholeField
- */
-export type WholeField = 'outline' | 'actor' | 'thumb' | 'poster' | 'extrafanart' | 'trailer' | 'release' | 'runtime' | 'score' | 'tag' | 'director' | 'series' | 'studio' | 'publisher';
+export type Website = 'airav' | 'airav_cc' | 'avsex' | 'avsox' | 'cableav' | 'cnmdb' | 'dmm' | 'faleno' | 'fantastica' | 'fc2' | 'fc2club' | 'fc2hub' | 'fc2ppvdb' | 'freejavbt' | 'getchu' | 'giga' | 'hdouban' | 'hscangku' | 'iqqtv' | 'jav321' | 'javbus' | 'javday' | 'javdb' | 'javlibrary' | 'kin8' | 'love6' | 'lulubar' | 'madouqu' | 'mdtv' | 'mgstage' | '7mmtv' | 'mywife' | 'prestige' | 'ammds' | 'theporndb' | 'xcity' | 'dahlia' | 'getchu_dmm' | 'official';
 
 export type DeleteConfigData = {
     body?: never;
@@ -1082,13 +1491,13 @@ export type GetCurrentConfigResponses = {
     /**
      * Successful Response
      */
-    200: Config;
+    200: ConfigOutput;
 };
 
 export type GetCurrentConfigResponse = GetCurrentConfigResponses[keyof GetCurrentConfigResponses];
 
 export type UpdateConfigData = {
-    body: Config;
+    body: ConfigInput;
     path?: never;
     query?: never;
     url: '/api/v1/config/';
@@ -1107,8 +1516,10 @@ export type UpdateConfigResponses = {
     /**
      * Successful Response
      */
-    200: unknown;
+    200: ConfigOutput;
 };
+
+export type UpdateConfigResponse = UpdateConfigResponses[keyof UpdateConfigResponses];
 
 export type ResetConfigData = {
     body?: never;
@@ -1121,8 +1532,10 @@ export type ResetConfigResponses = {
     /**
      * Successful Response
      */
-    200: unknown;
+    200: ConfigOutput;
 };
+
+export type ResetConfigResponse = ResetConfigResponses[keyof ResetConfigResponses];
 
 export type CreateConfigData = {
     body?: never;
@@ -1233,7 +1646,7 @@ export type GetDefaultConfigResponses = {
     /**
      * Successful Response
      */
-    200: Config;
+    200: ConfigOutput;
 };
 
 export type GetDefaultConfigResponse = GetDefaultConfigResponses[keyof GetDefaultConfigResponses];

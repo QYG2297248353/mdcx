@@ -620,6 +620,33 @@ async def thumb_download(
                         )
                         continue
                 LogBuffer.log().write(f"\n 🟠 Thumb download failed! {cover_from}: {cover_url} ")
+
+        # 所有 thumb 来源均失败，尝试从 extrafanart 取第一张图片作为兜底
+        if result.extrafanart:
+            for extra_url in result.extrafanart[:3]:
+                if not extra_url:
+                    continue
+                LogBuffer.log().write(f"\n 🔄 尝试使用 extrafanart 图片作为 thumb... ({extra_url})")
+                if await download_file_with_filepath(extra_url, thumb_final_path_temp, folder_new_path):
+                    cover_size = await check_pic_async(thumb_final_path_temp)
+                    if cover_size:
+                        if thumb_final_path_temp != thumb_final_path:
+                            await move_file_async(thumb_final_path_temp, thumb_final_path)
+                            await delete_file_async(thumb_final_path_temp)
+                        if cd_part:
+                            Flags.file_done_dic[result.number].update({"thumb": thumb_final_path})
+                        other.thumb_marked = False
+                        result.thumb_from = "extrafanart"
+                        LogBuffer.log().write(f"\n 🍀 Thumb done! (extrafanart fallback)({get_used_time(start_time)}s) ")
+                        other.thumb_path = thumb_final_path
+                        return True
+                    else:
+                        await delete_file_async(thumb_final_path_temp)
+                        LogBuffer.log().write(
+                            f"\n 🟠 检测到 extrafanart 图片分辨率不对{str(cover_size)}! 已删除"
+                        )
+                else:
+                    LogBuffer.log().write(f"\n 🟠 extrafanart 图片下载失败: {extra_url}")
     else:
         LogBuffer.log().write("\n 🟠 Thumb url is empty! ")
 

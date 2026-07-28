@@ -4,6 +4,7 @@ from ..config.models import Website
 from . import (
     airav,
     airav_cc,
+    ammds,
     avsex,
     avsox,
     cableav,
@@ -48,6 +49,7 @@ CRAWLER_FUNCS: list[tuple[Website, Callable]] = [
     (Website.MMTV, mmtv.main),
     (Website.AIRAV_CC, airav_cc.main),  # lang
     (Website.AIRAV, airav.main),  # lang
+    (Website.AMMDS, ammds.main),
     (Website.AVSEX, avsex.main),
     (Website.AVSOX, avsox.main),
     (Website.CABLEAV, cableav.main),

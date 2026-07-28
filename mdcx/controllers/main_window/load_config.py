@@ -462,6 +462,7 @@ def load_config(self: "MyMAinWindow"):
             (self.Ui.checkBox_google, Translator.GOOGLE),
             (self.Ui.checkBox_deepl, Translator.DEEPL),
             (self.Ui.checkBox_llm, Translator.LLM),
+            (self.Ui.checkBox_ammds, Translator.AMMDS),
         )
 
         # deepl_key
@@ -952,6 +953,8 @@ def load_config(self: "MyMAinWindow"):
             self.Ui.checkBox_site_use_browser.setChecked(site_config.use_browser)
 
         self.Ui.lineEdit_api_token_theporndb.setText(manager.config.theporndb_api_token)
+        self.Ui.lineEdit_ammds_url.setText(manager.config.ammds_url)
+        self.Ui.lineEdit_ammds_api_key.setText(manager.config.ammds_api_key)
         # javdb cookie
         self.set_javdb_cookie.emit(manager.config.javdb)
         # javbus cookie

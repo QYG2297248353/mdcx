@@ -3,7 +3,7 @@ import hashlib
 import random
 import time
 from typing import Literal, cast
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 from ..config.manager import manager
 from ..signals import signal
@@ -150,4 +150,33 @@ async def google_translate(title: str, outline: str) -> tuple[str, str, str | No
     (r1, e1), (r2, e2) = await asyncio.gather(_google_translate(title), _google_translate(outline))
     if r1 is None or r2 is None:
         return "", "", f"google 翻译失败! {e1} {e2}"
+    return r1, r2, None
+
+
+async def _ammds_translate(text: str) -> tuple[str | None, str]:
+    """调用 AMMDS 翻译单段文本，source 留空时由 AMMDS 自动识别源语言"""
+    if not text:
+        return "", ""
+    ammds_url = manager.config.ammds_url
+    api_key = manager.config.ammds_api_key
+    if not api_key:
+        return None, "AMMDS API Key 未配置"
+
+    parsed = urlparse(ammds_url)
+    translate_url = f"{parsed.scheme}://{parsed.netloc}/api/v1/translate/text"
+    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
+    body = {"text": text, "source": "", "target": "zh"}
+    res, error = await manager.computed.async_client.post_json(translate_url, json_data=body, headers=headers)
+    if res is None:
+        return None, error
+    if res.get("code") != 200:
+        return None, res.get("message", "未知错误")
+    data = res.get("data", {})
+    return data.get("translateText", ""), ""
+
+
+async def ammds_translate(title: str, outline: str) -> tuple[str, str, str | None]:
+    (r1, e1), (r2, e2) = await asyncio.gather(_ammds_translate(title), _ammds_translate(outline))
+    if r1 is None or r2 is None:
+        return "", "", f"AMMDS 翻译失败! {e1} {e2}"
     return r1, r2, None

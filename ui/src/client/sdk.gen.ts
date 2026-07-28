@@ -349,7 +349,7 @@ export const checkCookies = <ThrowOnError extends boolean = false>(options?: Opt
 
 /**
  * 获取网站自定义网址
- * 获取网站自定义网址设置, 对未设置的网站返回空字符串
+ * 获取网站自定义网址设置.
  */
 export const getSiteUrls = <ThrowOnError extends boolean = false>(options?: Options<GetSiteUrlsData, ThrowOnError>) => {
     return (options?.client ?? _heyApiClient).get<GetSiteUrlsResponses, unknown, ThrowOnError>({

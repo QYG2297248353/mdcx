@@ -181,3 +181,6 @@ Log/
 dev/
 *.ipynb
 .trae/
+AMMDS-API.md
+AMMDS-API-IMPORT.md
+ms-test

@@ -2,7 +2,7 @@
 
 import { type Options, deleteConfig, getCurrentConfig, updateConfig, resetConfig, createConfig, switchConfig, getConfigSchema, getConfigUiSchema, getDefaultConfig, getWebSocketConnections, listFiles, startScrape, scrapeSingleFile, createSymlink, addSubtitles, getActors, completeActors, checkCookies, getSiteUrls, setSiteUrl } from '../sdk.gen';
 import { type UseMutationOptions, queryOptions, type DefaultError } from '@tanstack/react-query';
-import type { DeleteConfigData, DeleteConfigError, GetCurrentConfigData, UpdateConfigData, UpdateConfigError, ResetConfigData, CreateConfigData, CreateConfigError, SwitchConfigData, SwitchConfigError, SwitchConfigResponse, GetConfigSchemaData, GetConfigUiSchemaData, GetDefaultConfigData, GetWebSocketConnectionsData, ListFilesData, StartScrapeData, ScrapeSingleFileData, ScrapeSingleFileError, CreateSymlinkData, CreateSymlinkError, AddSubtitlesData, GetActorsData, CompleteActorsData, CheckCookiesData, GetSiteUrlsData, SetSiteUrlData, SetSiteUrlError } from '../types.gen';
+import type { DeleteConfigData, DeleteConfigError, GetCurrentConfigData, UpdateConfigData, UpdateConfigError, UpdateConfigResponse, ResetConfigData, ResetConfigResponse, CreateConfigData, CreateConfigError, SwitchConfigData, SwitchConfigError, SwitchConfigResponse, GetConfigSchemaData, GetConfigUiSchemaData, GetDefaultConfigData, GetWebSocketConnectionsData, ListFilesData, StartScrapeData, ScrapeSingleFileData, ScrapeSingleFileError, CreateSymlinkData, CreateSymlinkError, AddSubtitlesData, GetActorsData, CompleteActorsData, CheckCookiesData, GetSiteUrlsData, SetSiteUrlData, SetSiteUrlError } from '../types.gen';
 import type { AxiosError } from 'axios';
 import { client as _heyApiClient } from '../client.gen';
 
@@ -77,8 +77,8 @@ export const getCurrentConfigOptions = (options?: Options<GetCurrentConfigData>)
 /**
  * 更新配置
  */
-export const updateConfigMutation = (options?: Partial<Options<UpdateConfigData>>): UseMutationOptions<unknown, AxiosError<UpdateConfigError>, Options<UpdateConfigData>> => {
-    const mutationOptions: UseMutationOptions<unknown, AxiosError<UpdateConfigError>, Options<UpdateConfigData>> = {
+export const updateConfigMutation = (options?: Partial<Options<UpdateConfigData>>): UseMutationOptions<UpdateConfigResponse, AxiosError<UpdateConfigError>, Options<UpdateConfigData>> => {
+    const mutationOptions: UseMutationOptions<UpdateConfigResponse, AxiosError<UpdateConfigError>, Options<UpdateConfigData>> = {
         mutationFn: async (localOptions) => {
             const { data } = await updateConfig({
                 ...options,
@@ -116,8 +116,8 @@ export const resetConfigOptions = (options?: Options<ResetConfigData>) => {
  * 重置配置
  * 将当前配置重置为默认值
  */
-export const resetConfigMutation = (options?: Partial<Options<ResetConfigData>>): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<ResetConfigData>> => {
-    const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<ResetConfigData>> = {
+export const resetConfigMutation = (options?: Partial<Options<ResetConfigData>>): UseMutationOptions<ResetConfigResponse, AxiosError<DefaultError>, Options<ResetConfigData>> => {
+    const mutationOptions: UseMutationOptions<ResetConfigResponse, AxiosError<DefaultError>, Options<ResetConfigData>> = {
         mutationFn: async (localOptions) => {
             const { data } = await resetConfig({
                 ...options,
@@ -565,7 +565,7 @@ export const getSiteUrlsQueryKey = (options?: Options<GetSiteUrlsData>) => creat
 
 /**
  * 获取网站自定义网址
- * 获取网站自定义网址设置, 对未设置的网站返回空字符串
+ * 获取网站自定义网址设置.
  */
 export const getSiteUrlsOptions = (options?: Options<GetSiteUrlsData>) => {
     return queryOptions({

@@ -8560,6 +8560,11 @@
                                 <string>javday</string>
                               </property>
                             </item>
+                            <item>
+                              <property name="text">
+                                <string>ammds</string>
+                              </property>
+                            </item>
                           </widget>
                         </item>
                         <item row="2" column="1">
@@ -12812,6 +12817,19 @@
                                 </property>
                                 <property name="text">
                                   <string>LLM</string>
+                                </property>
+                              </widget>
+                            </item>
+                            <item>
+                              <widget class="QCheckBox" name="checkBox_ammds">
+                                <property name="minimumSize">
+                                  <size>
+                                    <width>93</width>
+                                    <height>30</height>
+                                  </size>
+                                </property>
+                                <property name="text">
+                                  <string>AMMDS</string>
                                 </property>
                               </widget>
                             </item>
@@ -20455,10 +20473,10 @@
                                   <bool>false</bool>
                                 </property>
                                 <property name="minimum">
-                                  <number>3</number>
+                                  <number>5</number>
                                 </property>
                                 <property name="maximum">
-                                  <number>30</number>
+                                  <number>180</number>
                                 </property>
                                 <property name="pageStep">
                                   <number>1</number>
@@ -20490,12 +20508,12 @@
                                 </property>
                                 <property name="maximumSize">
                                   <size>
-                                    <width>70</width>
+                                    <width>90</width>
                                     <height>30</height>
                                   </size>
                                 </property>
                                 <property name="digitCount">
-                                  <number>2</number>
+                                  <number>3</number>
                                 </property>
                                 <property name="mode">
                                   <enum>QLCDNumber::Dec</enum>
@@ -20689,7 +20707,7 @@
                     <property name="geometry">
                       <rect>
                         <x>30</x>
-                        <y>1030</y>
+                        <y>1202</y>
                         <width>701</width>
                         <height>301</height>
                       </rect>
@@ -20877,14 +20895,14 @@
                         <x>30</x>
                         <y>830</y>
                         <width>701</width>
-                        <height>181</height>
+                        <height>191</height>
                       </rect>
                     </property>
                     <property name="styleSheet">
                       <string notr="true">font:&quot;Courier&quot;;</string>
                     </property>
                     <property name="title">
-                      <string>API Token</string>
+                      <string>ThePornDB</string>
                     </property>
                     <widget class="QWidget" name="gridLayoutWidget_11">
                       <property name="geometry">
@@ -21039,6 +21057,128 @@
                             </property>
                             <property name="textInteractionFlags">
                               <set>Qt::LinksAccessibleByKeyboard|Qt::LinksAccessibleByMouse</set>
+                            </property>
+                          </widget>
+                        </item>
+                      </layout>
+                    </widget>
+                  </widget>
+                  <widget class="QGroupBox" name="groupBox_ammds">
+                    <property name="geometry">
+                      <rect>
+                        <x>30</x>
+                        <y>1041</y>
+                        <width>701</width>
+                        <height>141</height>
+                      </rect>
+                    </property>
+                    <property name="styleSheet">
+                      <string notr="true">font:&quot;Courier&quot;;</string>
+                    </property>
+                    <property name="title">
+                      <string>AMMDS</string>
+                    </property>
+                    <widget class="QWidget" name="gridLayoutWidget_ammds">
+                      <property name="geometry">
+                        <rect>
+                          <x>20</x>
+                          <y>30</y>
+                          <width>661</width>
+                          <height>81</height>
+                        </rect>
+                      </property>
+                      <layout class="QGridLayout" name="gridLayout_ammds">
+                        <item row="0" column="0">
+                          <widget class="QLabel" name="label_ammds_url">
+                            <property name="sizePolicy">
+                              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                              </sizepolicy>
+                            </property>
+                            <property name="minimumSize">
+                              <size>
+                                <width>130</width>
+                                <height>30</height>
+                              </size>
+                            </property>
+                            <property name="layoutDirection">
+                              <enum>Qt::RightToLeft</enum>
+                            </property>
+                            <property name="text">
+                              <string>访问地址：</string>
+                            </property>
+                            <property name="alignment">
+                              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                            </property>
+                          </widget>
+                        </item>
+                        <item row="0" column="1">
+                          <widget class="QLineEdit" name="lineEdit_ammds_url">
+                            <property name="sizePolicy">
+                              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                              </sizepolicy>
+                            </property>
+                            <property name="minimumSize">
+                              <size>
+                                <width>300</width>
+                                <height>30</height>
+                              </size>
+                            </property>
+                            <property name="styleSheet">
+                              <string notr="true"> font: &quot;Courier&quot;;
+                                border: 1px solid rgba(0,0,0, 50);
+                                border-radius: 15px;
+</string>
+                            </property>
+                          </widget>
+                        </item>
+                        <item row="1" column="0">
+                          <widget class="QLabel" name="label_ammds_apikey">
+                            <property name="sizePolicy">
+                              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                              </sizepolicy>
+                            </property>
+                            <property name="minimumSize">
+                              <size>
+                                <width>130</width>
+                                <height>30</height>
+                              </size>
+                            </property>
+                            <property name="layoutDirection">
+                              <enum>Qt::RightToLeft</enum>
+                            </property>
+                            <property name="text">
+                              <string>API Key：</string>
+                            </property>
+                            <property name="alignment">
+                              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                            </property>
+                          </widget>
+                        </item>
+                        <item row="1" column="1">
+                          <widget class="QLineEdit" name="lineEdit_ammds_api_key">
+                            <property name="sizePolicy">
+                              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                              </sizepolicy>
+                            </property>
+                            <property name="minimumSize">
+                              <size>
+                                <width>300</width>
+                                <height>30</height>
+                              </size>
+                            </property>
+                            <property name="styleSheet">
+                              <string notr="true"> font: &quot;Courier&quot;;
+                                border: 1px solid rgba(0,0,0, 50);
+                                border-radius: 15px;
+</string>
                             </property>
                           </widget>
                         </item>

@@ -319,6 +319,7 @@ def save_config(self: "MyMAinWindow"):
         (self.Ui.checkBox_google, Translator.GOOGLE),
         (self.Ui.checkBox_deepl, Translator.DEEPL),
         (self.Ui.checkBox_llm, Translator.LLM),
+        (self.Ui.checkBox_ammds, Translator.AMMDS),
     )
     manager.config.translate_config.deepl_key = self.Ui.lineEdit_deepl_key.text()  # deepl key
 
@@ -643,6 +644,8 @@ def save_config(self: "MyMAinWindow"):
     manager.config.javdb = self.Ui.plainTextEdit_cookie_javdb.toPlainText()  # javdb cookie
     manager.config.javbus = self.Ui.plainTextEdit_cookie_javbus.toPlainText()  # javbus cookie
     manager.config.theporndb_api_token = self.Ui.lineEdit_api_token_theporndb.text()  # api token
+    manager.config.ammds_url = self.Ui.lineEdit_ammds_url.text()  # ammds 地址
+    manager.config.ammds_api_key = self.Ui.lineEdit_ammds_api_key.text()  # ammds api key
     if manager.config.javdb:
         manager.config.javdb = manager.config.javdb.replace("locale=en", "locale=zh")
     # endregion

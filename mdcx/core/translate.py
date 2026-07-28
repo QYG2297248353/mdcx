@@ -6,7 +6,7 @@ import traceback
 
 import zhconv
 
-from ..base.translate import deepl_translate, google_translate, llm_translate, youdao_translate
+from ..base.translate import ammds_translate, deepl_translate, google_translate, llm_translate, youdao_translate
 from ..base.web import get_actorname, get_yesjav_title
 from ..config.enums import FieldRule, Language, TagInclude
 from ..config.manager import manager
@@ -18,7 +18,7 @@ from ..models.types import CrawlersResult
 from ..number import get_number_letters
 from ..signals import signal
 from ..utils import clean_list, get_used_time
-from ..utils.language import is_japanese
+from ..utils.language import is_english, is_japanese
 
 
 def translate_info(json_data: CrawlersResult, has_sub: bool):
@@ -271,11 +271,11 @@ async def translate_title_outline(json_data: CrawlersResult, cd_part: str, movie
                 LogBuffer.log().write(f"\n 🆈 Yesjav title done!({get_used_time(start_time)}s)")
 
         # 使用json_data数据
-        if not movie_title and title_translate and title_is_jp:
+        if not movie_title and title_translate and (title_is_jp or is_english(json_data.title)):
             trans_title = json_data.title
 
     # 处理outline
-    if json_data.outline and outline_language != Language.JP and outline_translate and is_japanese(json_data.outline):
+    if json_data.outline and outline_language != Language.JP and outline_translate and (is_japanese(json_data.outline) or is_english(json_data.outline)):
         trans_outline = json_data.outline
 
     # 翻译
@@ -294,6 +294,8 @@ async def translate_title_outline(json_data: CrawlersResult, cd_part: str, movie
                 t, o, r = await llm_translate(trans_title, trans_outline)
             elif each == Translator.DEEPL:  # 使用deepl翻译
                 t, o, r = await deepl_translate(trans_title, trans_outline, "JA")
+            elif each == Translator.AMMDS:  # 使用 AMMDS 翻译
+                t, o, r = await ammds_translate(trans_title, trans_outline)
             else:  # 使用 google 翻译
                 t, o, r = await google_translate(trans_title, trans_outline)
             if r:

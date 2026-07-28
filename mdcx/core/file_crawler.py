@@ -108,7 +108,7 @@ class FileScraper:
         self.crawler_provider = crawler_provider
 
     async def _call_crawler(
-        self, task_input: CrawlerInput, website: Website, timeout: float | None = 30
+        self, task_input: CrawlerInput, website: Website, timeout: float | None = None
     ) -> CrawlerResponse:
         """
         调用指定网站的爬虫函数
@@ -116,7 +116,7 @@ class FileScraper:
         Args:
             task_input (CrawlerInput): 包含爬虫所需的输入数据
             website (str): 网站名称
-            timeout (float | None): 请求超时时间，默认为30秒
+            timeout (float | None): 请求超时时间，默认为 config.timeout * 1.5
 
         Raises:
             asyncio.TimeoutError: 如果请求超时
@@ -133,6 +133,8 @@ class FileScraper:
         # 对爬虫函数调用添加超时限制, 超时异常由调用者处理
         if os.getenv("DEBUG"):
             timeout = None
+        elif timeout is None:
+            timeout = self.config.timeout * 1.5
         r = await asyncio.wait_for(c.run(task_input), timeout=timeout)
         return r
 

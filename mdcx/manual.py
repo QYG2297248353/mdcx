@@ -477,6 +477,7 @@ class ManualConfig:
     WEB_DIC = {
         "airav.io": Website.AIRAV_CC,
         "airav.wiki": Website.AIRAV,
+        "ammds": Website.AMMDS,
         "9sex": Website.AVSEX,
         "avsex": Website.AVSEX,
         "avsox": Website.AVSOX,
