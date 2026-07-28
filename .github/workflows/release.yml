@@ -21,6 +21,7 @@ jobs:
       # https://github.com/actions/runner/issues/1985#issuecomment-1573518052
       - name: Set matrix
         id: set-matrix
+        shell: bash
         run: |
           items=()
 
@@ -55,6 +56,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          else
+            echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
+
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
@@ -70,13 +79,7 @@ jobs:
 
       - name: Build macOS app - macOS
         if: ${{ matrix.build == 'macos' }}
-        run: |
-          version="${{ github.ref_name }}"
-          # 如果是手动触发，则使用输入的tag
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            version="${{ github.event.inputs.tag }}"
-          fi
-          uv run scripts/build.py --create-dmg --version "$version" --debug
+        run: uv run scripts/build.py --create-dmg --version "${{ env.TAG }}" --debug
 
       - name: Build Windows app - Windows
         if: ${{ matrix.build == 'windows' }}
@@ -97,18 +100,18 @@ jobs:
         if: ${{ matrix.build == 'macos' }}
         with:
           overwrite: true
-          asset_name: MDCx-$tag-${{ matrix.build }}-${{ matrix.arch }}${{ matrix.tail }}-${{ github.sha }}.dmg
+          asset_name: MDCx-${{ env.TAG }}-${{ matrix.build }}-${{ matrix.arch }}${{ matrix.tail }}-${{ github.sha }}.dmg
           file: dist/MDCx.dmg
-          prerelease: ${{ !startsWith(github.event.inputs.tag || github.ref_name, '220') }}
+          prerelease: ${{ !startsWith(env.TAG, '220') }}
           body: ${{ steps.get-changelog.outputs.CHANGELOG }}
-          tag: ${{ github.event.inputs.tag || github.ref }}
+          tag: ${{ env.TAG }}
 
       - name: Create Release - Windows
         uses: svenstaro/upload-release-action@v2
         if: ${{ matrix.build == 'windows' }}
         with:
           overwrite: true
-          asset_name: MDCx-$tag-${{ matrix.build }}-${{ matrix.arch }}${{ matrix.tail }}-${{ github.sha }}.exe
+          asset_name: MDCx-${{ env.TAG }}-${{ matrix.build }}-${{ matrix.arch }}${{ matrix.tail }}-${{ github.sha }}.exe
           file: dist/MDCx.exe
-          prerelease: ${{ !startsWith(github.event.inputs.tag || github.ref_name, '220') }}
-          tag: ${{ github.event.inputs.tag || github.ref }}
+          prerelease: ${{ !startsWith(env.TAG, '220') }}
+          tag: ${{ env.TAG }}
