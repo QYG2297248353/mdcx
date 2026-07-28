@@ -3,9 +3,6 @@ name: Build and Release
 on:
   release:
     types: [published]
-  push:
-    tags:
-      - 220*
   workflow_dispatch:
     inputs:
       tag:
@@ -54,11 +51,18 @@ jobs:
           cat changelog.md >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
 
+      - name: Delete existing asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ASSET_NAME="MDCx-${{ env.TAG }}-windows-x86_64.exe"
+          gh release delete-asset "${{ env.TAG }}" "$ASSET_NAME" -y 2>/dev/null || true
+
       - name: Create Release
         uses: svenstaro/upload-release-action@v2
         with:
-          overwrite: true
-          asset_name: MDCx-${{ env.TAG }}-windows-x86_64-${{ github.sha }}.exe
+          asset_name: MDCx-${{ env.TAG }}-windows-x86_64.exe
           file: dist/MDCx.exe
           prerelease: ${{ !startsWith(env.TAG, '220') }}
           body: ${{ steps.get-changelog.outputs.CHANGELOG }}
