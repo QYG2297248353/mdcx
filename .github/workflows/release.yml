@@ -12,6 +12,9 @@ on:
         description: "Tag"
         required: true
 
+permissions:
+  contents: write
+
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
