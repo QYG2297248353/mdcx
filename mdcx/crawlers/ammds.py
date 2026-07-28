@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""AMMDS 数据源爬虫 — V1 架构
+
+检索流程:
+  1. POST /api/v1/movie/lookup  → 查询库内是否已入库
+  2. GET  /api/v1/movie/{id}    → Lookup 命中时获取完整元数据
+  3. POST /api/v1/movie/search  → 保底方案，多数据源检索并合并
+"""
+
 import re
 import time
 import traceback
@@ -10,334 +18,29 @@ from ..models.log_buffer import LogBuffer
 from ..utils.language import is_japanese
 
 
-def get_year(release):
+# ============================================================
+# 辅助函数
+# ============================================================
+
+def get_year(release: str) -> str:
+    """从日期字符串中提取四位年份"""
     try:
         return re.findall(r"\d{4}", release)[0]
     except Exception:
         return ""
 
 
-def get_actor_photo(actor):
-    actor = actor.split(",")
-    data = {}
-    for i in actor:
-        data[i] = ""
-    return data
-
-
-def _extract_mosaic(detail):
-    mosaic_val = detail.get("mpaa", "")
-    if not mosaic_val:
-        mosaic_val = detail.get("mosaic", "")
-    if "无码" in str(mosaic_val):
-        return "无码"
-    if "有码" in str(mosaic_val):
-        return "有码"
-    return "有码"
-
-
-def _extract_actors(actors_data):
-    if isinstance(actors_data, dict):
-        return ",".join(actors_data.keys())
-    if isinstance(actors_data, list):
-        return ",".join(actors_data)
-    return ""
-
-
-def _extract_directors(directors):
-    if isinstance(directors, list):
-        return ",".join(directors)
-    return ""
-
-
-def _extract_genres_tags(detail):
-    parts = []
-    genres = detail.get("genre", [])
-    if isinstance(genres, list):
-        parts.extend(genres)
-    tags = detail.get("tag", [])
-    if isinstance(tags, list):
-        parts.extend(tags)
-    return ",".join(parts)
-
-
-def _extract_studio(detail):
-    studio_list = detail.get("studio", [])
-    if isinstance(studio_list, list):
-        return ",".join(studio_list)
-    return ""
-
-
-def _extract_publisher(detail):
-    pub_list = detail.get("issueStudio", [])
-    if isinstance(pub_list, list):
-        return ",".join(pub_list)
-    return ""
-
-
-def _extract_series(detail):
-    sets = detail.get("sets", {})
-    if isinstance(sets, dict):
-        return sets.get("name", "")
-    return ""
-
-
-def _build_result(detail, detail_url, number):
-    orig_title = detail.get("originalTitle", "")
-    title_cn = detail.get("titleCn", "")
-    title = orig_title or title_cn or ""
-
-    plot = detail.get("plot", "")
-    plot_cn = detail.get("plotCn", "")
-    outline = plot_cn or plot or ""
-
-    actor = _extract_actors(detail.get("actors", {}))
-    all_actor = actor
-
-    director = _extract_directors(detail.get("director", []))
-
-    release = detail.get("premiered", "")
-    year = get_year(release)
-
-    runtime_val = detail.get("runtime", "")
-    runtime = str(runtime_val) if runtime_val else ""
-
-    score_val = detail.get("rating", "")
-    score = str(score_val) if score_val else ""
-
-    poster = detail.get("poster", "")
-    thumb = detail.get("thumb", "")
-    fanart = detail.get("fanart", "")
-    extrafanart_val = detail.get("extrafanart", "")
-
-    extrafanart = []
-    if fanart:
-        extrafanart.append(fanart)
-    if isinstance(extrafanart_val, str) and extrafanart_val:
-        extrafanart.append(extrafanart_val)
-    elif isinstance(extrafanart_val, list):
-        extrafanart.extend(extrafanart_val)
-
-    uniqueid = detail.get("uniqueid", number)
-
-    tag = _extract_genres_tags(detail)
-    studio = _extract_studio(detail)
-    publisher = _extract_publisher(detail) or studio
-    series = _extract_series(detail)
-    mosaic = _extract_mosaic(detail)
-
-    return {
-        "number": uniqueid,
-        "title": title,
-        "originaltitle": orig_title,
-        "actor": actor,
-        "all_actor": all_actor,
-        "outline": outline,
-        "originalplot": plot,
-        "tag": tag,
-        "release": release,
-        "year": year,
-        "runtime": runtime,
-        "score": score,
-        "series": series,
-        "director": director,
-        "studio": studio,
-        "publisher": publisher,
-        "source": "ammds",
-        "actor_photo": get_actor_photo(actor),
-        "all_actor_photo": get_actor_photo(all_actor),
-        "thumb": thumb,
-        "poster": poster,
-        "extrafanart": extrafanart,
-        "trailer": "",
-        "image_download": False,
-        "image_cut": "",
-        "mosaic": mosaic,
-        "website": detail_url,
-        "wanted": "",
-    }
-
-
-def _build_result_from_search(matched_items, number):
-    """从多个搜索结果条目中合并构建结果（不调用Detail API）"""
-    if not matched_items:
-        return None
-
-    # 以第一个匹配条目为基础
-    base = matched_items[0]
-
-    def _get_first(items, key):
-        """从多个条目中取首个非空值"""
-        for item in items:
-            val = item.get(key)
-            if val is not None and val != "" and val != [] and val != {}:
-                return val
-        return base.get(key, "")
-
-    def _get_first_jp(items, key):
-        """优先取日文值，找不到日文则取首个非空值"""
-        for item in items:
-            val = item.get(key)
-            if val is not None and val != "" and val != [] and val != {} and is_japanese(str(val)):
-                return val
-        return _get_first(items, key)
-
-    def _collect_unique(items, key):
-        """收集所有条目中指定字段的唯一非空值"""
-        result = []
-        for item in items:
-            val = item.get(key)
-            if val and val not in result:
-                result.append(val)
-        return result
-
-    def _merge_list(items, key):
-        """合并多个条目中的列表字段，去重"""
-        result = []
-        for item in items:
-            val = item.get(key, [])
-            if isinstance(val, (list, tuple)):
-                for v in val:
-                    if v and v not in result:
-                        result.append(v)
-        return result
-
-    def _get_first_nonzero(items, key):
-        """从多个条目中取首个非零数值"""
-        for item in items:
-            val = item.get(key)
-            if val:
-                return val
-        return base.get(key, "")
-
-    # 将日文标题的条目排在前面，确保日文优先
-    matched_items = sorted(matched_items, key=lambda x: is_japanese(x.get("title", "") or ""), reverse=True)
-
-    # 字符串字段：优先取日文值
-    title = _get_first_jp(matched_items, "title") or ""
-    summary = _get_first_jp(matched_items, "summary") or ""
-    cover = _get_first(matched_items, "cover") or ""
-    thumb = _get_first(matched_items, "thumb") or ""
-    director = _get_first_jp(matched_items, "director") or ""
-    studio = _get_first_jp(matched_items, "studio") or ""
-    series = _get_first_jp(matched_items, "series") or ""
-    release = _get_first(matched_items, "release") or ""
-    label = _get_first_jp(matched_items, "label") or ""
-    mosaic = _get_first_jp(matched_items, "mosaic") or ""
-    url = _get_first(matched_items, "url") or ""
-
-    # 列表字段：合并去重
-    actors = _merge_list(matched_items, "actors")
-    genres = _merge_list(matched_items, "genres")
-    tags = _merge_list(matched_items, "tags")
-    preview_images = _merge_list(matched_items, "previewImages")
-
-    # 合并 all tags
-    all_tag_parts = []
-    all_tag_parts.extend(genres)
-    all_tag_parts.extend(tags)
-
-    # 数值字段：取首个非零
-    runtime_val = _get_first_nonzero(matched_items, "runtime")
-    runtime = str(runtime_val) if runtime_val else ""
-    score_val = _get_first_nonzero(matched_items, "score")
-    score_val = score_val if score_val else 0
-    if isinstance(score_val, float) and score_val == 0:
-        score = ""
-    else:
-        score = str(score_val) if score_val else ""
-
-    # 演员
-    actor = ",".join([a for a in actors if a])
-
-    # 标签
-    tag = ",".join(all_tag_parts)
-
-    # 图片：收集所有数据源的全部唯一URL，实现多源fallback
-    all_covers = _collect_unique(matched_items, "cover")
-    all_thumbs = _collect_unique(matched_items, "thumb")
-    all_previews = []
-    for item in matched_items:
-        previews = item.get("previewImages", [])
-        if isinstance(previews, list):
-            for p in previews:
-                if p and p not in all_previews:
-                    all_previews.append(p)
-
-    # poster: 依次尝试全部 cover -> 全部 thumb -> 全部 preview 的首个
-    poster = ""
-    if all_covers:
-        poster = all_covers[0]
-    if not poster and all_thumbs:
-        poster = all_thumbs[0]
-    if not poster and all_previews:
-        poster = all_previews[0]
-
-    # thumb: 首个 thumb 或 cover
-    thumb = all_thumbs[0] if all_thumbs else (all_covers[0] if all_covers else "")
-
-    # extrafanart: 合并所有来源的 thumb + previewImages，去重，排除已用作 poster 的首张
-    extrafanart = []
-    for t in all_thumbs:
-        if t and t not in extrafanart:
-            extrafanart.append(t)
-    for img in all_previews:
-        if img and img not in extrafanart:
-            extrafanart.append(img)
-    # 如果 poster 在 extrafanart 中且是第一个，移除避免重复
-    if poster and extrafanart and extrafanart[0] == poster:
-        extrafanart.pop(0)
-
-    # thumb 备选列表（供后续下载失败重试）
-    thumb_fallback = all_thumbs[1:] if len(all_thumbs) > 1 else []
-
-    year = get_year(release)
-
-    # 马赛克判定
-    mosaic_result = "有码"
-    mosaic_lower = str(mosaic).lower() if mosaic else ""
-    if "无码" in mosaic_lower or "uncensored" in mosaic_lower:
-        mosaic_result = "无码"
-
-    return {
-        "number": _get_first(matched_items, "number") or number,
-        "title": title,
-        "originaltitle": title,
-        "actor": actor,
-        "all_actor": actor,
-        "outline": summary,
-        "originalplot": summary,
-        "tag": tag,
-        "release": release,
-        "year": year,
-        "runtime": runtime,
-        "score": score,
-        "series": series,
-        "director": director,
-        "studio": studio,
-        "publisher": studio,
-        "source": "ammds",
-        "actor_photo": {},
-        "all_actor_photo": {},
-        "thumb": thumb,
-        "poster": poster,
-        "extrafanart": extrafanart,
-        "trailer": "",
-        "image_download": False,
-        "image_cut": "",
-        "mosaic": mosaic_result,
-        "website": url,
-        "wanted": "",
-        "thumb_fallback": thumb_fallback,
-    }
+def get_actor_photo(actor: str) -> dict:
+    """构建演员名 → 空照片 URL 的映射"""
+    names = [a.strip() for a in actor.split(",") if a.strip()]
+    return {name: "" for name in names}
 
 
 def _check_response(res: Any, context: str) -> tuple[bool, str]:
-    """
-    校验 AMMDS API 统一响应格式: {code, message, data, timestamp}
+    """校验 AMMDS API 统一响应格式: {code, message, data, timestamp}
 
     Returns:
-        (ok, error_detail): ok=True 表示 code==200 且 data 不为 None
+        (ok, error_detail): ok=True 表示 code==200 且 data 有效 (非 None，非空数组)
     """
     if res is None:
         return False, f"{context}: 响应为空（网络请求失败）"
@@ -352,15 +55,413 @@ def _check_response(res: Any, context: str) -> tuple[bool, str]:
         return False, f"{context}: [{code}] {message}"
     if data is None:
         return False, f"{context}: data 为空"
+    if isinstance(data, list) and not data:
+        return False, f"{context}: data 为空数组（无结果）"
     return True, ""
 
 
+# ============================================================
+# Detail API 数据提取
+# ============================================================
+
+def _extract_actors(actors_data) -> str:
+    """从 Detail API 的 actors 字段提取逗号分隔的演员名列表"""
+    if isinstance(actors_data, dict):
+        return ",".join(actors_data.keys())
+    if isinstance(actors_data, list):
+        return ",".join(actors_data)
+    return ""
+
+
+def _extract_directors(directors) -> str:
+    if isinstance(directors, list):
+        return ",".join(directors)
+    return ""
+
+
+def _extract_genres_tags(detail: dict) -> str:
+    parts = []
+    for key in ("genre", "tag"):
+        val = detail.get(key, [])
+        if isinstance(val, list):
+            parts.extend(val)
+    return ",".join(parts)
+
+
+def _extract_studio(detail: dict) -> str:
+    val = detail.get("studio", [])
+    if isinstance(val, list):
+        return ",".join(val)
+    return ""
+
+
+def _extract_publisher(detail: dict) -> str:
+    val = detail.get("issueStudio", [])
+    if isinstance(val, list):
+        return ",".join(val)
+    return ""
+
+
+def _extract_series(detail: dict) -> str:
+    sets = detail.get("sets", {})
+    if isinstance(sets, dict):
+        return sets.get("name", "")
+    return ""
+
+
+def _extract_mosaic(detail: dict) -> str:
+    mosaic_val = detail.get("mpaa", "") or detail.get("mosaic", "")
+    s = str(mosaic_val)
+    if "无码" in s:
+        return "无码"
+    if "有码" in s:
+        return "有码"
+    return "有码"
+
+
+# ============================================================
+# 结果构建
+# ============================================================
+
+def _build_result(detail: dict, detail_url: str, number: str) -> dict:
+    """从 Detail API 返回的完整元数据构建结果字典"""
+    orig_title = detail.get("originalTitle", "") or ""
+    title_cn = detail.get("titleCn", "") or ""
+    title = orig_title or title_cn or ""
+
+    plot = detail.get("plot", "") or ""
+    plot_cn = detail.get("plotCn", "") or ""
+    outline = plot_cn or plot or ""
+
+    actor = _extract_actors(detail.get("actors", {}))
+    director = _extract_directors(detail.get("director", []))
+    release = detail.get("premiered", "") or ""
+    year = get_year(release)
+
+    runtime_val = detail.get("runtime", "")
+    runtime = str(runtime_val) if runtime_val else ""
+
+    score_val = detail.get("rating", "")
+    score = str(score_val) if score_val else ""
+
+    poster = detail.get("poster", "") or ""
+    thumb = detail.get("thumb", "") or ""
+    fanart = detail.get("fanart", "") or ""
+    extrafanart_val = detail.get("extrafanart", "")
+
+    extrafanart = []
+    if fanart:
+        extrafanart.append(fanart)
+    if isinstance(extrafanart_val, str) and extrafanart_val:
+        extrafanart.append(extrafanart_val)
+    elif isinstance(extrafanart_val, list):
+        extrafanart.extend(extrafanart_val)
+
+    uniqueid = detail.get("uniqueid", number) or number
+    tag = _extract_genres_tags(detail)
+    studio = _extract_studio(detail)
+    publisher = _extract_publisher(detail) or studio
+    series = _extract_series(detail)
+    mosaic = _extract_mosaic(detail)
+
+    actor_photo = get_actor_photo(actor)
+
+    return {
+        "number": uniqueid,
+        "title": title,
+        "originaltitle": orig_title,
+        "actor": actor,
+        "all_actor": actor,
+        "outline": outline,
+        "originalplot": plot,
+        "tag": tag,
+        "release": release,
+        "year": year,
+        "runtime": runtime,
+        "score": score,
+        "series": series,
+        "director": director,
+        "studio": studio,
+        "publisher": publisher,
+        "source": "ammds",
+        "actor_photo": actor_photo,
+        "all_actor_photo": actor_photo,
+        "thumb": thumb,
+        "poster": poster,
+        "extrafanart": extrafanart,
+        "trailer": "",
+        "image_download": False,
+        "image_cut": "",
+        "mosaic": mosaic,
+        "website": detail_url,
+        "wanted": "",
+    }
+
+
+def _build_result_from_search(search_items: list[dict], number: str) -> dict:
+    """从多个数据源的搜索结果中合并构建结果（不调用 Detail API）
+
+    合并策略:
+      - 日文标题/简介优先（is_japanese 判定）
+      - 演员/标签列表合并去重
+      - 图片优先取可正常获取的来源（非 javbus.com 优先）
+      - 所有字段补全，不留空值
+    """
+    if not search_items:
+        return _empty_result(number)
+
+    # --- 1. 筛选：size写匹配当前番号的条目 ---
+    matched = []
+    for item in search_items:
+        item_num = (item.get("number") or "").upper()
+        if item_num == number.upper():
+            matched.append(item)
+
+    if not matched:
+        # 无精确匹配，取第一个结果兜底
+        matched = [search_items[0]]
+
+    # --- 2. 排序：日文标题优先 ---
+    matched.sort(
+        key=lambda x: is_japanese(str(x.get("title") or "")),
+        reverse=True,
+    )
+
+    # --- 3-4. 标题 & 简介：日文优先 ---
+    title = ""
+    outline = ""
+    for item in matched:
+        t = item.get("title") or ""
+        s = item.get("summary") or ""
+        if not title:
+            title = t
+        elif is_japanese(t) and not is_japanese(title):
+            title = t
+        if not outline:
+            outline = s
+        elif is_japanese(s) and not is_japanese(outline):
+            outline = s
+
+    originaltitle = title
+
+    # --- 5. 演员：合并去重 ---
+    actors_list = []
+    for item in matched:
+        val = item.get("actors") or []
+        if isinstance(val, list):
+            for a in val:
+                a_str = str(a).strip()
+                if a_str and a_str not in actors_list:
+                    actors_list.append(a_str)
+    actor = ",".join(actors_list)
+
+    # --- 6. 标签：合并 genres + tags，去重 ---
+    all_tags = []
+    for item in matched:
+        for key in ("genres", "tags"):
+            val = item.get(key) or []
+            if isinstance(val, list):
+                for v in val:
+                    v_str = str(v).strip()
+                    if v_str and v_str not in all_tags:
+                        all_tags.append(v_str)
+    tag = ",".join(all_tags)
+
+    # --- 7. 导演/制作商/系列/厂牌：日文优先 → 首个非空 ---
+    def _pick_str(items: list[dict], key: str) -> str:
+        jp_val = ""
+        first_val = ""
+        for item in items:
+            v = str(item.get(key) or "").strip()
+            if not v:
+                continue
+            if not first_val:
+                first_val = v
+            if is_japanese(v):
+                jp_val = v
+                break
+        return jp_val or first_val
+
+    director = _pick_str(matched, "director")
+    studio = _pick_str(matched, "studio")
+    series = _pick_str(matched, "series")
+    label = _pick_str(matched, "label")
+
+    # --- 8. 发行日期：取首个非空 ---
+    release = ""
+    for item in matched:
+        release = str(item.get("release") or "").strip()
+        if release:
+            break
+    year = get_year(release)
+
+    # --- 9. 时长 / 评分：取首个有效值 ---
+    runtime = ""
+    for item in matched:
+        v = item.get("runtime")
+        if v:
+            runtime = str(v)
+            break
+
+    score = ""
+    for item in matched:
+        v = item.get("score")
+        if v is not None and v != 0:
+            score = str(v)
+            break
+
+    # --- 10. 图片：收集所有来源，优先可正常获取的 ---
+    all_covers = []
+    all_thumbs = []
+    all_previews = []
+
+    for item in matched:
+        c = (item.get("cover") or "").strip()
+        t = (item.get("thumb") or "").strip()
+        if c and c not in all_covers:
+            all_covers.append(c)
+        if t and t not in all_thumbs:
+            all_thumbs.append(t)
+        previews = item.get("previewImages") or []
+        if isinstance(previews, list):
+            for p in previews:
+                p_str = str(p).strip()
+                if p_str and p_str not in all_previews:
+                    all_previews.append(p_str)
+
+    def _is_blocked_image(url: str) -> bool:
+        """判断图片 URL 是否来自可能被屏蔽的域名"""
+        return "javbus.com" in url
+
+    # poster: 优先非 javbus cover → javbus cover → thumb → preview
+    poster = ""
+    for c in all_covers:
+        if not _is_blocked_image(c):
+            poster = c
+            break
+    if not poster:
+        poster = all_covers[0] if all_covers else ""
+    if not poster:
+        poster = all_thumbs[0] if all_thumbs else ""
+    if not poster:
+        poster = all_previews[0] if all_previews else ""
+
+    # thumb: 优先非 javbus thumb → 首个 cover
+    thumb = ""
+    for t in all_thumbs:
+        if not _is_blocked_image(t):
+            thumb = t
+            break
+    if not thumb:
+        thumb = all_thumbs[0] if all_thumbs else (all_covers[0] if all_covers else "")
+
+    # extrafanart: 合并所有 thumb + previewImages，排除已用作 poster/thumb 的首张
+    extrafanart = []
+    for t in all_thumbs:
+        if t and t not in extrafanart:
+            extrafanart.append(t)
+    for p in all_previews:
+        if p and p not in extrafanart:
+            extrafanart.append(p)
+    # 如果 poster 在 extrafanart 首位，移除避免重复
+    if poster and extrafanart and extrafanart[0] == poster:
+        extrafanart.pop(0)
+
+    # --- 11. 马赛克 ---
+    mosaic_raw = _pick_str(matched, "mosaic")
+    mosaic = "有码"
+    if mosaic_raw:
+        m_lower = mosaic_raw.lower()
+        if "无码" in m_lower or "uncensored" in m_lower:
+            mosaic = "无码"
+
+    # --- 12. Website URL ---
+    website = ""
+    for item in matched:
+        u = (item.get("url") or "").strip()
+        if u:
+            website = u
+            break
+
+    # --- 13. 组装结果 ---
+    actor_photo = get_actor_photo(actor)
+
+    return {
+        "number": number,
+        "title": title,
+        "originaltitle": originaltitle,
+        "actor": actor,
+        "all_actor": actor,
+        "outline": outline,
+        "originalplot": outline,
+        "tag": tag,
+        "release": release,
+        "year": year,
+        "runtime": runtime,
+        "score": score,
+        "series": series,
+        "director": director,
+        "studio": studio,
+        "publisher": studio or label or "",
+        "source": "ammds",
+        "actor_photo": actor_photo,
+        "all_actor_photo": actor_photo,
+        "thumb": thumb,
+        "poster": poster,
+        "extrafanart": extrafanart,
+        "trailer": "",
+        "image_download": False,
+        "image_cut": "",
+        "mosaic": mosaic,
+        "website": website,
+        "wanted": "",
+    }
+
+
+def _empty_result(number: str) -> dict:
+    """返回空结果字典，所有字段为空默认值"""
+    return {
+        "number": number,
+        "title": "",
+        "originaltitle": "",
+        "actor": "",
+        "all_actor": "",
+        "outline": "",
+        "originalplot": "",
+        "tag": "",
+        "release": "",
+        "year": "",
+        "runtime": "",
+        "score": "",
+        "series": "",
+        "director": "",
+        "studio": "",
+        "publisher": "",
+        "source": "ammds",
+        "actor_photo": {},
+        "all_actor_photo": {},
+        "thumb": "",
+        "poster": "",
+        "extrafanart": [],
+        "trailer": "",
+        "image_download": False,
+        "image_cut": "",
+        "mosaic": "有码",
+        "website": "",
+        "wanted": "",
+    }
+
+
+# ============================================================
+# 主入口
+# ============================================================
+
 async def main(
-    number,
-    appoint_url="",
-    file_path="",
+    number: str,
+    appoint_url: str = "",
+    file_path: str = "",
     **kwargs,
-):
+) -> dict:
     start_time = time.time()
     website_name = "ammds"
     LogBuffer.req().write(f"-> {website_name}")
@@ -368,7 +469,6 @@ async def main(
     ammds_url = manager.config.ammds_url
     api_key = manager.config.ammds_api_key
 
-    LogBuffer.info().write("\n    🌐 ammds")
     web_info = "\n       "
     debug_info = ""
 
@@ -384,6 +484,7 @@ async def main(
     }
 
     try:
+        # --- API Key 检查 ---
         if not api_key:
             debug_info = "请添加 AMMDS API Key 后刮削！（「设置」-「网络」-「AMMDS API Key」）"
             LogBuffer.info().write(web_info + debug_info)
@@ -391,9 +492,10 @@ async def main(
 
         parsed = urlparse(ammds_url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
-        movie_id = None
 
-        # ---- appoint_url path ----
+        # ============================================================
+        # 路径 A: appoint_url — 指定地址直连
+        # ============================================================
         if appoint_url:
             detail_url = appoint_url
             debug_info = f"指定地址: {detail_url}"
@@ -417,14 +519,14 @@ async def main(
                 raise Exception(debug_info)
 
             detail = res_detail.get("data", {})
-            try:
-                dic = _build_result(detail, detail_url, number)
-                debug_info = f"数据获取成功！(耗时: {elapsed:.2f}s)"
-                LogBuffer.info().write(web_info + debug_info)
-            except Exception as e:
-                debug_info = f"数据生成出错: {str(e)}"
+            if not isinstance(detail, dict) or not detail:
+                debug_info = f"详情 data 无效 (耗时: {elapsed:.2f}s)"
                 LogBuffer.info().write(web_info + debug_info)
                 raise Exception(debug_info)
+
+            dic = _build_result(detail, detail_url, number)
+            debug_info = f"数据获取成功！(耗时: {elapsed:.2f}s)"
+            LogBuffer.info().write(web_info + debug_info)
 
             result = {website_name: {"zh_cn": dic, "zh_tw": dic, "jp": dic}}
             LogBuffer.req().write(f"({round(time.time() - start_time)}s) ")
@@ -433,7 +535,9 @@ async def main(
         # ============================================================
         # Step 1: Lookup — 查询库内是否已入库
         # ============================================================
+        movie_id = None
         lookup_hit = False
+
         try:
             lookup_url = f"{base_url}/api/v1/movie/lookup"
             lookup_body = {"number": number}
@@ -455,19 +559,22 @@ async def main(
                 ok, err = _check_response(res_lookup, "本地匹配")
                 if ok:
                     movie_id = res_lookup.get("data")
-                    if movie_id:
+                    if movie_id and isinstance(movie_id, str):
                         lookup_hit = True
                         debug_info = f"           命中影片 ID: {movie_id} (耗时: {elapsed:.2f}s)"
                         LogBuffer.info().write(web_info + debug_info)
+                    else:
+                        debug_info = f"           未命中 (data={movie_id}, 耗时: {elapsed:.2f}s)"
+                        LogBuffer.info().write(web_info + debug_info)
                 else:
-                    debug_info = f"           未命中 (耗时: {elapsed:.2f}s)"
+                    debug_info = f"           未命中: {err} (耗时: {elapsed:.2f}s)"
                     LogBuffer.info().write(web_info + debug_info)
         except Exception as e:
-            debug_info = f"           异常 (将回退到搜索): {str(e)}"
+            debug_info = f"           异常 (将回退到搜索): {e}"
             LogBuffer.info().write(web_info + debug_info)
 
         # ============================================================
-        # Step 2: Detail — 仅当 Lookup 命中时用库内 ID 获取详情
+        # Step 2: Detail — Lookup 命中时获取完整元数据
         # ============================================================
         detail_success = False
         if lookup_hit and movie_id:
@@ -486,16 +593,12 @@ async def main(
                 if ok:
                     detail = res_detail.get("data", {})
                     if isinstance(detail, dict) and detail:
-                        try:
-                            dic = _build_result(detail, detail_url, number)
-                            debug_info = f"           数据获取成功！(耗时: {elapsed:.2f}s)"
-                            LogBuffer.info().write(web_info + debug_info)
-                            detail_success = True
-                        except Exception as e:
-                            debug_info = f"           数据生成出错: {str(e)}"
-                            LogBuffer.info().write(web_info + debug_info)
+                        dic = _build_result(detail, detail_url, number)
+                        debug_info = f"           数据获取成功！(耗时: {elapsed:.2f}s)"
+                        LogBuffer.info().write(web_info + debug_info)
+                        detail_success = True
                     else:
-                        debug_info = f"           详情 data 为空 (将回退到搜索)"
+                        debug_info = f"           详情 data 无效 (将回退到搜索)"
                         LogBuffer.info().write(web_info + debug_info)
                 else:
                     debug_info = f"           详情请求失败: {err} (将回退到搜索)"
@@ -505,7 +608,7 @@ async def main(
                 LogBuffer.info().write(web_info + debug_info)
 
         # ============================================================
-        # Step 3: Search — 保底方案，搜索结果直接构建不调Detail
+        # Step 3: Search — 保底方案，多数据源检索并合并
         # ============================================================
         if not detail_success:
             search_url = f"{base_url}/api/v1/movie/search"
@@ -526,21 +629,27 @@ async def main(
                 LogBuffer.info().write(web_info + debug_info)
                 raise Exception(debug_info)
 
+            code = res_search.get("code", 0)
+            message = res_search.get("message", "")
+
+            if code == 401:
+                raise Exception("AMMDS API Key 无效或已过期，请在 AMMDS 管理面板重新生成")
+            if code == 500:
+                raise Exception(
+                    f"AMMDS 数据源检索服务异常 ({message})。"
+                    "请检查 AMMDS 管理面板 → 数据源设置，确保数据源已正确配置。"
+                )
+
             ok, err = _check_response(res_search, "数据源检索")
             if not ok:
+                if code == 200 and isinstance(res_search.get("data"), list):
+                    # 空数组：搜索成功但无结果
+                    debug_info = f"             未搜索到影片: {number} (耗时: {elapsed:.2f}s)"
+                    LogBuffer.info().write(web_info + debug_info)
+                    raise Exception(debug_info)
                 debug_info = f"             {err} (耗时: {elapsed:.2f}s)"
                 LogBuffer.info().write(web_info + debug_info)
-                code = res_search.get("code", 0)
-                message = res_search.get("message", "")
-                if code == 401:
-                    raise Exception("AMMDS API Key 无效或已过期，请在 AMMDS 管理面板重新生成")
-                elif code == 500:
-                    raise Exception(
-                        f"AMMDS 数据源检索服务异常 ({message})。"
-                        "请检查 AMMDS 管理面板 → 数据源设置，确保数据源已正确配置。"
-                    )
-                else:
-                    raise Exception(f"AMMDS 检索失败: {message} (code={code})")
+                raise Exception(f"AMMDS 检索失败: {message} (code={code})")
 
             search_results = res_search.get("data", [])
             if not isinstance(search_results, list) or not search_results:
@@ -548,58 +657,17 @@ async def main(
                 LogBuffer.info().write(web_info + debug_info)
                 raise Exception(debug_info)
 
-            # 收集所有 number 匹配的条目
-            matched_items = []
-            for movie in search_results:
-                movie_num = movie.get("number") or ""
-                if movie_num.upper() == number.upper():
-                    matched_items.append(movie)
-
-            if not matched_items:
-                # 无精确匹配，用第一个结果作为兜底
-                matched_items = [search_results[0]]
-
             debug_info = (
                 f"             搜索到 {len(search_results)} 条结果, "
-                f"{len(matched_items)} 条精确匹配, 多源合并构建 (耗时: {elapsed:.2f}s)"
+                f"多源合并构建 (耗时: {elapsed:.2f}s)"
             )
             LogBuffer.info().write(web_info + debug_info)
 
-            # 直接从搜索结果构建，不调Detail
-            dic = _build_result_from_search(matched_items, number)
+            dic = _build_result_from_search(search_results, number)
 
     except Exception:
         print(traceback.format_exc())
-        dic = {
-            "number": number,
-            "title": "",
-            "originaltitle": "",
-            "actor": "",
-            "all_actor": "",
-            "outline": "",
-            "originalplot": "",
-            "tag": "",
-            "release": "",
-            "year": "",
-            "runtime": "",
-            "score": "",
-            "series": "",
-            "director": "",
-            "studio": "",
-            "publisher": "",
-            "source": "ammds",
-            "actor_photo": {},
-            "all_actor_photo": {},
-            "thumb": "",
-            "poster": "",
-            "extrafanart": [],
-            "trailer": "",
-            "image_download": False,
-            "image_cut": "",
-            "mosaic": "有码",
-            "website": "",
-            "wanted": "",
-        }
+        dic = _empty_result(number)
 
     result = {website_name: {"zh_cn": dic, "zh_tw": dic, "jp": dic}}
     LogBuffer.req().write(f"({round(time.time() - start_time)}s) ")
