@@ -18,21 +18,17 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      # https://github.com/actions/runner/issues/1985#issuecomment-1573518052
       - name: Set matrix
         id: set-matrix
         shell: bash
         run: |
           items=()
 
-          # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
-
           items+=('{"build": "macos", "os": "macos-latest", "arch": "aarch64"}')
           items+=('{"build": "macos", "os": "macos-13", "arch": "x86_64"}')
 
           items+=('{"build": "windows", "os": "windows-latest", "arch": "x86_64"}')
 
-          # 合并items到json数组
           matrix="matrix=["
           for ((i=0; i<${#items[@]}; i++)); do
             matrix+=" ${items[i]}"
@@ -42,7 +38,6 @@ jobs:
           done
           matrix+="]"
 
-          # 输出matrix到GITHUB_OUTPUT
           echo $matrix >> $GITHUB_OUTPUT
 
   build-app:
